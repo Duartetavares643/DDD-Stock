@@ -1,0 +1,54 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if the requesting user is authenticated
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // Helper: check if the requesting user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Allow any authenticated user to read (needed for unique username/email checks)
+      allow read: if isAuthenticated();
+      // Allow user to create their own document with validation
+      allow create: if isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasAll(['uid', 'username', 'email', 'created_at'])
+        && request.resource.data.username is string
+        && request.resource.data.username.size() >= 3
+        && request.resource.data.username.size() <= 50
+        && request.resource.data.email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$')
+        && request.resource.data.uid == userId;
+      // Allow user to update their own document
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      // Deny delete
+      allow delete: if false;
+    }
+
+    // Auth sessions collection
+    match /auth_sessions/{sessionId} {
+      allow read, update, delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+    }
+
+    // Auth error log collection
+    match /auth_error_log/{errorId} {
+      // Only system writes (via authenticated backend)
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.uid;
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

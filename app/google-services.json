@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "950898868747",
+    "project_id": "ddd-stock",
+    "storage_bucket": "ddd-stock.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:950898868747:android:30aed7614a460a81e27d0e",
+        "android_client_info": {
+          "package_name": "ddd.stock"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOB6nFSSxWYn123sgLzZcIljsc0kR6S8A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
