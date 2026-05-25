@@ -6,7 +6,6 @@
     <string name="nav_header_subtitle">Inventory Management</string>
     <string name="nav_header_desc">Navigation header</string>
 
-
     <string name="menu_home">Home</string>
 
     <!-- Auth -->
@@ -31,10 +30,6 @@
     <string name="auth_pin">Security PIN</string>
     <string name="auth_pin_helper">4 digits, no sequential patterns</string>
 
-    <string name="auth_setup_pin">Set Up PIN</string>
-    <string name="auth_pin_subtitle">Create a 4-digit security PIN</string>
-    <string name="auth_verify_pin">Verify PIN</string>
-
     <!-- Home -->
     <string name="home_welcome">Welcome, %s</string>
     <string name="home_logout">Logout</string>
@@ -43,5 +38,4 @@
 
     <!-- General -->
     <string name="generic_error">Something went wrong</string>
-    <string name="retry">Retry</string>
 </resources>

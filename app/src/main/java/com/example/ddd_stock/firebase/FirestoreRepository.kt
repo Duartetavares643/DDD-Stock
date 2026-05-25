@@ -75,21 +75,6 @@ class FirestoreRepository {
         }
     }
 
-    suspend fun incrementFailedAttempts(uid: String, maxAttempts: Int, lockMinutes: Long): Result<Unit> {
-        return try {
-            val user = getUserById(uid).getOrElse { return Result.failure(Exception("User not found")) }
-            val newAttempts = user.failedAttempts + 1
-            val updates = mutableMapOf<String, Any>("failed_attempts" to newAttempts)
-            if (newAttempts >= maxAttempts) {
-                val lockDuration = lockMinutes * 60
-                updates["locked_until"] = Timestamp(Timestamp.now().seconds + lockDuration, 0)
-            }
-            updateUser(uid, updates)
-        } catch (e: Exception) {
-            Result.failure(Exception("Failed to increment attempts: ${e.message}"))
-        }
-    }
-
     suspend fun resetFailedAttempts(uid: String): Result<Unit> {
         return try {
             updateUser(uid, mapOf<String, Any>(
@@ -130,28 +115,4 @@ class FirestoreRepository {
         }
     }
 
-    suspend fun updatePin(uid: String, pinHash: String, pinSalt: String): Result<Unit> {
-        return try {
-            updateUser(uid, mapOf(
-                "pin_hash" to pinHash,
-                "pin_salt" to pinSalt,
-                "pin_created_at" to Timestamp.now(),
-                "updated_at" to Timestamp.now()
-            ))
-        } catch (e: Exception) {
-            Result.failure(Exception("Failed to update PIN: ${e.message}"))
-        }
-    }
-
-    suspend fun lockUser(uid: String, durationMinutes: Long): Result<Unit> {
-        return try {
-            val lockDuration = durationMinutes * 60
-            updateUser(uid, mapOf(
-                "locked_until" to Timestamp(Timestamp.now().seconds + lockDuration, 0),
-                "updated_at" to Timestamp.now()
-            ))
-        } catch (e: Exception) {
-            Result.failure(Exception("Failed to lock user: ${e.message}"))
-        }
-    }
 }

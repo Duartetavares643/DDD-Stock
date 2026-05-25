@@ -11,7 +11,6 @@ import com.example.ddd_stock.model.AppUser
 import com.example.ddd_stock.model.AuthErrorLog
 import com.example.ddd_stock.model.AuthSession
 import com.example.ddd_stock.service.SessionManager
-import com.example.ddd_stock.util.Constants
 import com.example.ddd_stock.util.PinUtils
 import com.example.ddd_stock.util.SecurityUtils
 import com.example.ddd_stock.util.ValidationUtils
@@ -220,41 +219,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             sessionManager.saveUserUid(uid)
             sessionManager.saveAuthState(true)
 
-            _authState.value = AuthState.Success(uid)
-        }
-    }
-
-    fun verifyPin(pin: String, uid: String) {
-        viewModelScope.launch {
-            val userResult = firestoreRepo.getUserById(uid)
-            val user = userResult.getOrElse {
-                _authState.value = AuthState.Error("User not found")
-                return@launch
-            }
-
-            if (SecurityUtils.isPinLocked(user.failedAttempts, user.lockedUntil)) {
-                logAuthError(
-                    type = AuthErrorLog.ErrorType.ACCOUNT_LOCKED,
-                    identifier = uid
-                )
-                _authState.value = AuthState.Error("PIN locked. Try again in 30 minutes.")
-                return@launch
-            }
-
-            val isValid = PinUtils.verifyPin(pin, user.pinHash, user.pinSalt)
-            if (!isValid) {
-                firestoreRepo.incrementFailedAttempts(
-                    uid, Constants.MAX_PIN_ATTEMPTS, Constants.LOCK_DURATION_MINUTES
-                )
-                logAuthError(
-                    type = AuthErrorLog.ErrorType.INVALID_PIN,
-                    identifier = uid
-                )
-                _authState.value = AuthState.Error("Invalid PIN")
-                return@launch
-            }
-
-            firestoreRepo.resetFailedAttempts(uid)
             _authState.value = AuthState.Success(uid)
         }
     }

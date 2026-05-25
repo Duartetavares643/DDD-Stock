@@ -1,10 +1,8 @@
 package com.example.ddd_stock.util
 
 import android.content.Context
-import android.net.wifi.WifiManager
 import java.net.InetAddress
 import java.net.NetworkInterface
-import java.util.Locale
 import java.util.UUID
 
 object SecurityUtils {
@@ -45,9 +43,4 @@ object SecurityUtils {
         return com.google.firebase.Timestamp.now().seconds < lockedUntil.seconds
     }
 
-    fun isPinLocked(failedAttempts: Int, lockedUntil: com.google.firebase.Timestamp?): Boolean {
-        if (lockedUntil == null) return false
-        if (failedAttempts < Constants.MAX_PIN_ATTEMPTS) return false
-        return com.google.firebase.Timestamp.now().seconds < lockedUntil.seconds
-    }
 }

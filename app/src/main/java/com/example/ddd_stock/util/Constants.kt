@@ -6,8 +6,6 @@ object Constants {
     const val AUTH_ERROR_LOG_COLLECTION = "auth_error_log"
 
     const val MAX_LOGIN_ATTEMPTS = 5
-    const val MAX_PIN_ATTEMPTS = 3
-    const val LOCK_DURATION_MINUTES = 30L
 
     const val USERNAME_MIN_LENGTH = 3
     const val USERNAME_MAX_LENGTH = 50
