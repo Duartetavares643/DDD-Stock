@@ -14,7 +14,6 @@ class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
     private lateinit var authViewModel: LoginViewModel
-    private lateinit var homeViewModel: HomeViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false); return binding.root
@@ -23,11 +22,6 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         authViewModel = ViewModelProvider(requireActivity()).get(LoginViewModel::class.java)
-        homeViewModel = ViewModelProvider(this).get(HomeViewModel::class.java)
-        homeViewModel.loadUserProfile()
-        homeViewModel.user.observe(viewLifecycleOwner) { binding.textHome.text = getString(R.string.home_welcome, it.username); binding.progressBar.visibility = View.GONE; binding.textHome.visibility = View.VISIBLE }
-        homeViewModel.isLoading.observe(viewLifecycleOwner) { binding.progressBar.visibility = if (it) View.VISIBLE else View.GONE; if (it) binding.textHome.visibility = View.GONE }
-        homeViewModel.error.observe(viewLifecycleOwner) { if (it != null) { binding.progressBar.visibility = View.GONE; binding.textHome.text = it; binding.textHome.visibility = View.VISIBLE } }
         binding.btnLogout.setOnClickListener { authViewModel.logout(); findNavController().navigate(R.id.action_global_logout) }
     }
 

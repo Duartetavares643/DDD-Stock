@@ -39,10 +39,8 @@
     <string name="auth_back_to_login">Back to Login</string>
 
     <!-- Home -->
-    <string name="home_welcome">Welcome, %s</string>
+    <string name="home_dummy">Welcome!\nYou are logged in.</string>
     <string name="home_logout">Logout</string>
-    <string name="home_loading">Loading your dashboard…</string>
-    <string name="home_error">Failed to load profile</string>
 
     <!-- General -->
     <string name="generic_error">Something went wrong</string>
