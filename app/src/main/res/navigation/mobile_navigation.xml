@@ -32,8 +32,9 @@
         <action
             android:id="@+id/action_login_to_home"
             app:destination="@id/nav_home"
-            app:popUpTo="@id/loginFragment"
-            app:popUpToInclusive="true" />
+            app:popUpTo="@id/mobile_navigation"
+            app:popUpToInclusive="true"
+            app:launchSingleTop="true" />
         <action
             android:id="@+id/action_login_to_forgot_password"
             app:destination="@id/forgotPasswordFragment"
@@ -58,8 +59,9 @@
         <action
             android:id="@+id/action_register_to_home"
             app:destination="@id/nav_home"
-            app:popUpTo="@id/loginFragment"
-            app:popUpToInclusive="true" />
+            app:popUpTo="@id/mobile_navigation"
+            app:popUpToInclusive="true"
+            app:launchSingleTop="true" />
     </fragment>
 
     <fragment

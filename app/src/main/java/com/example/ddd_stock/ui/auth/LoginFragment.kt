@@ -43,7 +43,7 @@ class LoginFragment : Fragment() {
     private fun setupObservers() = viewModel.authState.observe(viewLifecycleOwner) { state ->
         when (state) {
             is LoginViewModel.AuthState.Loading -> { binding.btnLogin.showLoading(); hideError() }
-            is LoginViewModel.AuthState.Success -> { binding.btnLogin.hideLoading(); findNavController().navigate(R.id.action_login_to_home) }
+            is LoginViewModel.AuthState.Success -> { binding.btnLogin.hideLoading(); if (isAdded) findNavController().navigate(R.id.action_login_to_home) }
             is LoginViewModel.AuthState.Error -> { binding.btnLogin.hideLoading(); showError(state.message) }
             is LoginViewModel.AuthState.Idle -> binding.btnLogin.hideLoading()
         }

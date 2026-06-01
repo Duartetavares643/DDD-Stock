@@ -53,7 +53,7 @@ class RegisterFragment : Fragment() {
         viewModel.authState.observe(viewLifecycleOwner) { state ->
             when (state) {
                 is RegisterViewModel.AuthState.Loading -> { binding.btnRegister.showLoading(); hideError() }
-                is RegisterViewModel.AuthState.Success -> { binding.btnRegister.hideLoading(); findNavController().navigate(R.id.action_register_to_home) }
+                is RegisterViewModel.AuthState.Success -> { binding.btnRegister.hideLoading(); if (isAdded) findNavController().navigate(R.id.action_register_to_home) }
                 is RegisterViewModel.AuthState.Error -> { binding.btnRegister.hideLoading(); showError(state.message) }
                 is RegisterViewModel.AuthState.Idle -> binding.btnRegister.hideLoading()
             }
