@@ -1,55 +1,21 @@
 package com.example.ddd_stock.service
-
 import android.content.Context
-import android.content.SharedPreferences
-import com.example.ddd_stock.model.AuthSession
 import com.google.firebase.Timestamp
 
 class SessionManager(context: Context) {
+    private val p = context.getSharedPreferences("ddd_stock_auth_prefs", Context.MODE_PRIVATE)
 
-    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private fun put(key: String, value: Any?) = p.edit().apply {
+        when (value) { is String -> putString(key, value); is Boolean -> putBoolean(key, value); is Long -> putLong(key, value); is Int -> putInt(key, value) }
+    }.apply()
 
-    fun saveSessionId(sessionId: String) {
-        prefs.edit().putString(KEY_SESSION_ID, sessionId).apply()
-    }
-
-    fun getSessionId(): String? = prefs.getString(KEY_SESSION_ID, null)
-
-    fun saveUserUid(uid: String) {
-        prefs.edit().putString(KEY_USER_UID, uid).apply()
-    }
-
-    fun getUserUid(): String? = prefs.getString(KEY_USER_UID, null)
-
-    fun saveSessionExpiry(timestamp: Timestamp) {
-        prefs.edit().putLong(KEY_SESSION_EXPIRY, timestamp.seconds).apply()
-    }
-
-    fun isSessionValid(): Boolean {
-        val expiry = prefs.getLong(KEY_SESSION_EXPIRY, 0L)
-        if (expiry == 0L) return false
-        val now = Timestamp.now().seconds
-        return now < expiry
-    }
-
-    fun clearSession() {
-        prefs.edit().remove(KEY_SESSION_ID)
-            .remove(KEY_USER_UID)
-            .remove(KEY_SESSION_EXPIRY)
-            .apply()
-    }
-
-    fun saveAuthState(isLoggedIn: Boolean) {
-        prefs.edit().putBoolean(KEY_AUTH_STATE, isLoggedIn).apply()
-    }
-
-    fun isLoggedIn(): Boolean = prefs.getBoolean(KEY_AUTH_STATE, false)
-
-    companion object {
-        private const val PREFS_NAME = "ddd_stock_auth_prefs"
-        private const val KEY_SESSION_ID = "session_id"
-        private const val KEY_USER_UID = "user_uid"
-        private const val KEY_SESSION_EXPIRY = "session_expiry"
-        private const val KEY_AUTH_STATE = "auth_state"
-    }
+    fun saveSessionId(id: String) = put("session_id", id)
+    fun getSessionId() = p.getString("session_id", null)
+    fun saveUserUid(uid: String) = put("user_uid", uid)
+    fun getUserUid() = p.getString("user_uid", null)
+    fun saveSessionExpiry(ts: Timestamp) = put("session_expiry", ts.seconds)
+    fun isSessionValid() = p.getLong("session_expiry", 0L).let { it != 0L && Timestamp.now().seconds < it }
+    fun saveAuthState(loggedIn: Boolean) = put("auth_state", loggedIn)
+    fun isLoggedIn() = p.getBoolean("auth_state", false)
+    fun clearSession() = p.edit().remove("session_id").remove("user_uid").remove("session_expiry").apply()
 }

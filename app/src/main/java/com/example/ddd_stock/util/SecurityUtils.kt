@@ -1,46 +1,28 @@
 package com.example.ddd_stock.util
-
 import android.content.Context
-import java.net.InetAddress
 import java.net.NetworkInterface
 import java.util.UUID
+import com.google.firebase.Timestamp
 
 object SecurityUtils {
-
-    fun generateSessionId(): String = UUID.randomUUID().toString()
-
-    fun generateErrorId(): String = UUID.randomUUID().toString()
-
-    fun maskIdentifier(identifier: String): String {
-        if (identifier.length <= 3) return identifier.first().toString().padEnd(identifier.length, '*')
-        val first = identifier.first()
-        val last = identifier.last()
-        val masked = identifier.drop(1).dropLast(1).map { '*' }.joinToString("")
-        return "$first$masked$last"
+    fun genId() = UUID.randomUUID().toString()
+    fun maskIdentifier(id: String): String {
+        if (id.length <= 3) return "${id.first()}${"*".repeat(id.length - 1)}"
+        return "${id.first()}${"*".repeat(id.length - 2)}${id.last()}"
     }
-
     fun getDeviceIpAddress(context: Context): String {
         try {
-            val interfaces = NetworkInterface.getNetworkInterfaces()
-            while (interfaces.hasMoreElements()) {
-                val networkInterface = interfaces.nextElement()
-                val addresses = networkInterface.inetAddresses
-                while (addresses.hasMoreElements()) {
-                    val address = addresses.nextElement()
-                    if (!address.isLoopbackAddress && address is InetAddress) {
-                        val hostAddress = address.hostAddress ?: continue
-                        if (hostAddress.indexOf(':') < 0) return hostAddress
-                    }
+            val ni = NetworkInterface.getNetworkInterfaces() ?: return "0.0.0.0"
+            while (ni.hasMoreElements()) {
+                val addrs = ni.nextElement().inetAddresses ?: continue
+                while (addrs.hasMoreElements()) {
+                    val a = addrs.nextElement()
+                    if (!a.isLoopbackAddress) { val h = a.hostAddress ?: continue; if (':' !in h) return h }
                 }
             }
         } catch (_: Exception) {}
         return "0.0.0.0"
     }
-
-    fun isAccountLocked(failedAttempts: Int, lockedUntil: com.google.firebase.Timestamp?): Boolean {
-        if (lockedUntil == null) return false
-        if (failedAttempts < Constants.MAX_LOGIN_ATTEMPTS) return false
-        return com.google.firebase.Timestamp.now().seconds < lockedUntil.seconds
-    }
-
+    fun isAccountLocked(failedAttempts: Int, lockedUntil: Timestamp?) =
+        lockedUntil != null && failedAttempts >= Constants.MAX_LOGIN_ATTEMPTS && Timestamp.now().seconds < lockedUntil.seconds
 }
