@@ -23,31 +23,31 @@ O app segue o padrão **MVVM** em 3 camadas:
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                    TELA (UI)                     │
+│                    TELA (UI)                    │
 │   LoginFragment · RegisterFragment              │
 │   ForgotPasswordFragment · HomeFragment         │
-│                                                  │
+│                                                 │
 │   O que o utilizador VÊ e com o que INTERAGE    │
 └──────────────────────┬──────────────────────────┘
                        │  "observa" (LiveData)
                        ▼
 ┌─────────────────────────────────────────────────┐
-│               VIEWMODEL (Lógica)                 │
+│               VIEWMODEL (Lógica)                │
 │   LoginViewModel · RegisterViewModel            │
 │   ForgotPasswordViewModel · HomeViewModel       │
-│                                                  │
+│                                                 │
 │   Onde a VALIDAÇÃO e a LÓGICA de negócio vivem  │
 └──────────────────────┬──────────────────────────┘
                        │  "chama" (suspend functions)
                        ▼
-┌─────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────┐
 │               DATA (Dados)                       │
-│   AuthRepository      → Firebase Authentication │
-│   FirestoreRepository → Firebase Firestore      │
+│   AuthRepository      → Firebase Authentication  │
+│   FirestoreRepository → Firebase Firestore       │
 │   SessionManager      → SharedPreferences (local)│
 │                                                  │
-│   Onde os DADOS são lidos/escritos              │
-└─────────────────────────────────────────────────┘
+│   Onde os DADOS são lidos/escritos               │
+└──────────────────────────────────────────────────┘
 ```
 
 ### Regra de ouro (muito importante):
@@ -64,21 +64,21 @@ O app tem 4 ecrãs principais. A navegação entre eles é feita com **Jetpack N
 
 ```
 ┌──────────────┐       ┌──────────────────┐
-│   LOGIN      │ ────→ │   REGISTAR       │
-│              │ ←──── │                  │
-│ (email +     │       │ (username, email, │
+│   LOGIN      │ ────> │   REGISTAR       │
+│              │ <──── │                  │
+│ (email +     │       │ (username, email,│
 │  password)   │       │  password, PIN,  │
 │              │       │  nome, contacto) │
 │              │       └──────────────────┘
 │              │
 │     │        │       ┌──────────────────┐
-│     └─────── │ ────→ │ ESQUECEU SENHA   │
+│     └─────── │ ────> │ ESQUECEU SENHA   │
 │              │       │                  │
 │              │       │ (email para      │
 │              │       │  redefinição)    │
 │              │       └──────────────────┘
 │              │
-│     └─────── │ ────→ ┌──────────────────┐
+│     └─────── │ ────> ┌──────────────────┐
 │                      │   HOME           │
 │                      │                  │
 │                      │ (dashboard após  │
@@ -107,14 +107,14 @@ Um ecrã com:
 UTILIZADOR clica "Sign In"
          │
          ▼
-┌─────────────────────────────────────┐
-│  1. VALIDAÇÃO (LoginViewModel)      │
-│                                     │
-│  Email é válido?     ← Se não → ❌ "Email inválido"
-│  Password ≥ 7 chars? ← Se não → ❌ "Password muito curta"
-│                                     │
-│  Se tudo OK → continua              │
-└─────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│  1. VALIDAÇÃO (LoginViewModel)                            │ 
+│                                                           │
+│  Email é válido?     < Se não >  "Email inválido"         │
+│  Password ≥ 7 chars? < Se não >  "Password muito curta"   │
+│                                                          │
+│  Se tudo OK → continua                                    │
+└───────────────────────────────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────┐
@@ -123,8 +123,8 @@ UTILIZADOR clica "Sign In"
 │  Chama Firebase Authentication      │
 │  com email + password               │
 │                                     │
-│  Sucesso? → continua               │
-│  Erro?    → ❌ Mostra erro          │
+│  Sucesso? → continua                │
+│  Erro?    →  Mostra erro            │
 │              ("Email ou password    │
 │               inválidos")           │
 └─────────────────────────────────────┘
@@ -136,21 +136,21 @@ UTILIZADOR clica "Sign In"
 │  Vai ao Firestore buscar os dados   │
 │  do utilizador (coleção "users")    │
 │                                     │
-│  Encontrou? → continua             │
-│  Não?       → ❌ "Perfil não        │
+│  Encontrou? → continua              │
+│  Não?       →  "Perfil não          │
 │                encontrado"          │
 └─────────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────┐
-│  4. CONTA BLOQUEADA?               │
+│  4. CONTA BLOQUEADA?                │
 │                                     │
 │  O utilizador tem mais de 5         │
 │  tentativas falhadas seguidas?      │
 │                                     │
-│  Sim? → ❌ "Conta bloqueada.        │
+│  Sim? →  "Conta bloqueada.          │
 │           Tente mais tarde."        │
-│  Não? → continua                   │
+│  Não? → continua                    │
 └─────────────────────────────────────┘
          │
          ▼
@@ -158,22 +158,22 @@ UTILIZADOR clica "Sign In"
 │  5. CRIAR SESSÃO                    │
 │                                     │
 │  Guarda no Firestore:               │
-│  - ID da sessão (UUID)             │
-│  - ID do utilizador                │
-│  - Data de criação                 │
-│  - Data de expiração (24h)         │
-│  - IP do dispositivo               │
+│  - ID da sessão (UUID)              │
+│  - ID do utilizador                 │
+│  - Data de criação                  │
+│  - Data de expiração (24h)          │
+│  - IP do dispositivo                │
 │                                     │
 │  Guarda no telemóvel (local):       │
-│  - session_id                      │
-│  - user_uid                        │
-│  - session_expiry                  │
-│  - auth_state = true               │
+│  - session_id                       │
+│  - user_uid                         │
+│  - session_expiry                   │
+│  - auth_state = true                │
 └─────────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────┐
-│  6. ✅ SUCESSO — Vai para a HOME   │
+│  6.  SUCESSO — Vai para a HOME      │
 └─────────────────────────────────────┘
 ```
 
@@ -215,24 +215,24 @@ UTILIZADOR clica "Create Account"
 │  1. VALIDAÇÃO (RegisterViewModel)       │
 │                                         │
 │  Username: 3-50 caracteres, alfanumérico│
-│  Email: formato válido                 │
-│  Password: ≥7 chars, 1 letra + 1 número│
-│  PIN: exatamente 4 dígitos, sem        │
-│       sequências (1234, 1111)          │
-│  Nome: letras e hífens (opcional)      │
-│  Contacto: formato E.164 (opcional)    │
+│  Email: formato válido                  │
+│  Password: ≥7 chars, 1 letra + 1 número │
+│  PIN: exatamente 4 dígitos, sem         │
+│       sequências (1234, 1111)           │
+│  Nome: letras e hífens (opcional)       │
+│  Contacto: formato E.164 (opcional)     │
 │                                         │
-│  Se tudo OK → continua                 │
+│  Se tudo OK → continua                  │
 └─────────────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────────┐
-│  2. VERIFICAR DUPLICADOS               │
+│  2. VERIFICAR DUPLICADOS                │
 │                                         │
-│  Username já existe no Firestore? → ❌  │
-│  Email já existe no Firestore?   → ❌   │
+│  Username já existe no Firestore?       │
+│  Email já existe no Firestore?          │
 │                                         │
-│  Se não → continua                     │
+│  Se não → continua                      │
 └─────────────────────────────────────────┘
          │
          ▼
@@ -244,14 +244,14 @@ UTILIZADOR clica "Create Account"
 │                                         │
 │  Obtém UID único do Firebase            │
 │                                         │
-│  Sucesso? → continua                   │
-│  Erro?    → ❌ Mostra erro             │
+│  Sucesso? → continua                    │
+│  Erro?    →  Mostra erro                │
 └─────────────────────────────────────────┘
          │
          ▼
-┌─────────────────────────────────────────┐
-│  4. GUARDAR PERFIL (FirestoreRepos.)    │
-│                                         │
+┌────────────────────────────────────────┐
+│  4. GUARDAR PERFIL (FirestoreRepos.)   │
+│                                        │
 │  Cria documento em "users/{uid}" com:  │
 │  - uid, username, email                │
 │  - firstName, surname, contact         │
@@ -259,13 +259,13 @@ UTILIZADOR clica "Create Account"
 │  - created_at, updated_at, last_login  │
 │  - failed_attempts = 0                 │
 │  - locked_until = null                 │
-│                                         │
+│                                        │
 │  Se falhar → apaga conta Firebase      │
-└─────────────────────────────────────────┘
+└────────────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────────┐
-│  5. ✅ SUCESSO — Vai para a HOME       │
+│  5.  SUCESSO — Vai para a HOME          |
 └─────────────────────────────────────────┘
 ```
 
@@ -312,8 +312,8 @@ UTILIZADOR clica "Forgot Password?" no Login
 ┌─────────────────────────────────────────┐
 │  3. VALIDAÇÃO (ForgotPasswordViewModel) │
 │                                         │
-│  Email é válido? → continua            │
-│  Inválido?       → ❌ "Email inválido" │
+│  Email é válido? → continua             │
+│  Inválido?       →  "Email inválido"    │
 └─────────────────────────────────────────┘
          │
          ▼
@@ -321,10 +321,10 @@ UTILIZADOR clica "Forgot Password?" no Login
 │  4. ENVIAR EMAIL (AuthRepository)       │
 │                                         │
 │  Firebase Auth envia email de           │
-│  redefinição de password               │
+│  redefinição de password                │
 │                                         │
-│  Sucesso? → ✅ "Reset link sent!"      │
-│  Erro?    → ❌ Mostra erro             │
+│  Sucesso? →  "Reset link sent!"         │
+│  Erro?    →  Mostra erro                │
 └─────────────────────────────────────────┘
 ```
 
@@ -346,15 +346,15 @@ APP ABRE
     │
     ▼
 ┌─────────────────────────────────────────┐
-│  MainActivity.onCreate()               │
+│  MainActivity.onCreate()                │
 │                                         │
 │  Pergunta ao SessionManager:            │
-│  "O utilizador já fez login antes?"    │
+│  "O utilizador já fez login antes?"     │
 │                                         │
-│  Sim? → Vai direto para a HOME         │
-│         (pula o ecrã de Login)         │
+│  Sim? → Vai direto para a HOME          │
+│         (pula o ecrã de Login)          │
 │                                         │
-│  Não? → Mostra o ecrã de Login         │
+│  Não? → Mostra o ecrã de Login          │
 └─────────────────────────────────────────┘
 ```
 
