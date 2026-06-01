@@ -1,7 +1,4 @@
-package com.example.ddd_stock.firebase
-import com.example.ddd_stock.model.AppUser
-import com.example.ddd_stock.model.AuthErrorLog
-import com.example.ddd_stock.model.AuthSession
+package com.example.ddd_stock.data
 import com.example.ddd_stock.util.Constants
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore

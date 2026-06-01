@@ -27,7 +27,4 @@
     <color name="strength_strong">#FF66BB6A</color>
     <color name="strength_very_strong">#FF4CAF50</color>
 
-    <!-- PIN keypad -->
-    <color name="pin_key_bg">#FF2C2C2C</color>
-    <color name="pin_key_text">#FFFFFFFF</color>
 </resources>

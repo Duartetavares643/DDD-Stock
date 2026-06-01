@@ -1,4 +1,4 @@
-package com.example.ddd_stock.service
+package com.example.ddd_stock.data
 import android.content.Context
 import com.google.firebase.Timestamp
 

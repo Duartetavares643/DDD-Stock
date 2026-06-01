@@ -1,225 +1,433 @@
-# Fluxo de Login — DDDStock
+# DDDStock — Guia do Fluxo de Autenticação
 
-## 1. Visão Geral da Arquitetura
-
-O login segue o padrão **MVVM** com três camadas:
-
-```
-LoginFragment (View)
-    ↓  observa
-AuthViewModel (ViewModel)
-    ↓  chama
-AuthRepository / FirestoreRepository / SessionManager (Model)
-```
-
-| Componente | Função |
-|---|---|
-| `LoginFragment` | UI do formulário de login (email + password + botão + loading) |
-| `AuthViewModel` | Lógica de validação, autenticação, criação de sessão e estado |
-| `AuthRepository` | Abstração sobre o Firebase Authentication |
-| `FirestoreRepository` | Operações CRUD no Firestore (usuários, sessões, logs) |
-| `SessionManager` | Persistência local via `SharedPreferences` |
-| `AuthSession` | Modelo de dados da sessão armazenada no Firestore |
-| `AppUser` | Modelo do perfil de usuário com campos de bloqueio |
-
-A navegação entre fragmentos usa o **Jetpack Navigation** definido em `mobile_navigation.xml`.
+> Um guia simples e direto de como o login, registo e recuperação de senha funcionam no DDDStock.
 
 ---
 
-## 2. Fluxo Passo a Passo
+## Índice
 
-### 2.1 — UI: LoginFragment
+1. [Arquitetura (Visão Geral)](#1-arquitetura-visão-geral)
+2. [Ecrãs (Telas) do App](#2-ecrãs-telas-do-app)
+3. [Fluxo de Login](#3-fluxo-de-login)
+4. [Fluxo de Registo](#4-fluxo-de-registo)
+5. [Fluxo "Esqueceu a Senha"](#5-fluxo-esqueceu-a-senha)
+6. [Auto-login (Sessão Persistente)](#6-auto-login-sessão-persistente)
+7. [Logout](#7-logout)
+8. [Mapa de Ficheiros](#8-mapa-de-ficheiros)
 
-O `LoginFragment` exibe o formulário com campos de email e password, botão "Sign In" e link "Create Account".
+---
 
-**Observadores de estado:**
+## 1. Arquitetura (Visão Geral)
 
-```kotlin
-viewModel.authState.observe(viewLifecycleOwner) { state ->
-    when (state) {
-        is AuthViewModel.AuthState.Loading -> btnLogin.showLoading()
-        is AuthViewModel.AuthState.Success -> showSuccess()  // navega para Home
-        is AuthViewModel.AuthState.Error   -> showError(state.message)
-        is AuthViewModel.AuthState.Idle    -> btnLogin.hideLoading()
-    }
-}
+O app segue o padrão **MVVM** em 3 camadas:
+
+```
+┌─────────────────────────────────────────────────┐
+│                    TELA (UI)                     │
+│   LoginFragment · RegisterFragment              │
+│   ForgotPasswordFragment · HomeFragment         │
+│                                                  │
+│   O que o utilizador VÊ e com o que INTERAGE    │
+└──────────────────────┬──────────────────────────┘
+                       │  "observa" (LiveData)
+                       ▼
+┌─────────────────────────────────────────────────┐
+│               VIEWMODEL (Lógica)                 │
+│   LoginViewModel · RegisterViewModel            │
+│   ForgotPasswordViewModel · HomeViewModel       │
+│                                                  │
+│   Onde a VALIDAÇÃO e a LÓGICA de negócio vivem  │
+└──────────────────────┬──────────────────────────┘
+                       │  "chama" (suspend functions)
+                       ▼
+┌─────────────────────────────────────────────────┐
+│               DATA (Dados)                       │
+│   AuthRepository      → Firebase Authentication │
+│   FirestoreRepository → Firebase Firestore      │
+│   SessionManager      → SharedPreferences (local)│
+│                                                  │
+│   Onde os DADOS são lidos/escritos              │
+└─────────────────────────────────────────────────┘
 ```
 
-**Ações do usuário:**
-- Clicar **Sign In** → chama `viewModel.login(email, password)`
-- Clicar **Create Account** → navega para `RegisterFragment` via `action_login_to_register`
-- Digitar nos campos → esconde mensagens de erro anteriores
+### Regra de ouro (muito importante):
 
-### 2.2 — Validação: AuthViewModel
+> **A Tela NUNCA toca na base de dados.**
+> A Tela só fala com o ViewModel.
+> O ViewModel é que fala com os repositórios.
 
-Ao chamar `login()`, o ViewModel valida os campos antes de qualquer requisição:
+---
 
-| Campo | Validação | Erro típico |
+## 2. Ecrãs (Telas) do App
+
+O app tem 4 ecrãs principais. A navegação entre eles é feita com **Jetpack Navigation** (o sistema de navegação do Android).
+
+```
+┌──────────────┐       ┌──────────────────┐
+│   LOGIN      │ ────→ │   REGISTAR       │
+│              │ ←──── │                  │
+│ (email +     │       │ (username, email, │
+│  password)   │       │  password, PIN,  │
+│              │       │  nome, contacto) │
+│              │       └──────────────────┘
+│              │
+│     │        │       ┌──────────────────┐
+│     └─────── │ ────→ │ ESQUECEU SENHA   │
+│              │       │                  │
+│              │       │ (email para      │
+│              │       │  redefinição)    │
+│              │       └──────────────────┘
+│              │
+│     └─────── │ ────→ ┌──────────────────┐
+│                      │   HOME           │
+│                      │                  │
+│                      │ (dashboard após  │
+│                      │  login)          │
+│                      └──────────────────┘
+└──────────────┘
+```
+
+---
+
+## 3. Fluxo de Login
+
+### 3.1 — O que o utilizador vê
+
+Um ecrã com:
+- Campo de **Email**
+- Campo de **Password** (com olhinho para mostrar/ocultar)
+- Link **"Forgot Password?"**
+- Botão **"Sign In"** (que mostra um spinner a rodar enquanto carrega)
+- Link **"Create Account"** (para novos utilizadores)
+- Mensagem de erro vermelha se algo correr mal
+
+### 3.2 — O que acontece quando o utilizador clica "Sign In"
+
+```
+UTILIZADOR clica "Sign In"
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  1. VALIDAÇÃO (LoginViewModel)      │
+│                                     │
+│  Email é válido?     ← Se não → ❌ "Email inválido"
+│  Password ≥ 7 chars? ← Se não → ❌ "Password muito curta"
+│                                     │
+│  Se tudo OK → continua              │
+└─────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  2. AUTENTICAÇÃO (AuthRepository)   │
+│                                     │
+│  Chama Firebase Authentication      │
+│  com email + password               │
+│                                     │
+│  Sucesso? → continua               │
+│  Erro?    → ❌ Mostra erro          │
+│              ("Email ou password    │
+│               inválidos")           │
+└─────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  3. BUSCAR PERFIL (FirestoreRepos.) │
+│                                     │
+│  Vai ao Firestore buscar os dados   │
+│  do utilizador (coleção "users")    │
+│                                     │
+│  Encontrou? → continua             │
+│  Não?       → ❌ "Perfil não        │
+│                encontrado"          │
+└─────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  4. CONTA BLOQUEADA?               │
+│                                     │
+│  O utilizador tem mais de 5         │
+│  tentativas falhadas seguidas?      │
+│                                     │
+│  Sim? → ❌ "Conta bloqueada.        │
+│           Tente mais tarde."        │
+│  Não? → continua                   │
+└─────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  5. CRIAR SESSÃO                    │
+│                                     │
+│  Guarda no Firestore:               │
+│  - ID da sessão (UUID)             │
+│  - ID do utilizador                │
+│  - Data de criação                 │
+│  - Data de expiração (24h)         │
+│  - IP do dispositivo               │
+│                                     │
+│  Guarda no telemóvel (local):       │
+│  - session_id                      │
+│  - user_uid                        │
+│  - session_expiry                  │
+│  - auth_state = true               │
+└─────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  6. ✅ SUCESSO — Vai para a HOME   │
+└─────────────────────────────────────┘
+```
+
+### 3.3 — Tratamento de erros
+
+Sempre que o login falha, o sistema regista um **log de erro** no Firestore (coleção `auth_error_log`) com:
+- ID único do erro
+- Tipo de erro (password errada, conta bloqueada, etc.)
+- Email do utilizador (parcialmente oculto: `j***@email.com`)
+- Data e hora
+- IP do dispositivo
+
+Isto permite mais tarde auditoria de segurança.
+
+---
+
+## 4. Fluxo de Registo
+
+### 4.1 — O que o utilizador vê
+
+Um ecrã com:
+- Campo **Username** (verifica automaticamente se já existe)
+- Campo **First Name** (opcional)
+- Campo **Surname** (opcional)
+- Campo **Email** (verifica automaticamente se já existe)
+- Campo **Contact** (opcional, formato telefone)
+- Campo **Password** + indicador de força
+- Campo **Security PIN** (4 dígitos)
+- Botão **"Create Account"**
+- Link **"Sign In"** (voltar)
+
+### 4.2 — O que acontece quando o utilizador clica "Create Account"
+
+```
+UTILIZADOR clica "Create Account"
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│  1. VALIDAÇÃO (RegisterViewModel)       │
+│                                         │
+│  Username: 3-50 caracteres, alfanumérico│
+│  Email: formato válido                 │
+│  Password: ≥7 chars, 1 letra + 1 número│
+│  PIN: exatamente 4 dígitos, sem        │
+│       sequências (1234, 1111)          │
+│  Nome: letras e hífens (opcional)      │
+│  Contacto: formato E.164 (opcional)    │
+│                                         │
+│  Se tudo OK → continua                 │
+└─────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│  2. VERIFICAR DUPLICADOS               │
+│                                         │
+│  Username já existe no Firestore? → ❌  │
+│  Email já existe no Firestore?   → ❌   │
+│                                         │
+│  Se não → continua                     │
+└─────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│  3. CRIAR CONTA (AuthRepository)        │
+│                                         │
+│  Firebase Auth cria conta com           │
+│  email + password                       │
+│                                         │
+│  Obtém UID único do Firebase            │
+│                                         │
+│  Sucesso? → continua                   │
+│  Erro?    → ❌ Mostra erro             │
+└─────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│  4. GUARDAR PERFIL (FirestoreRepos.)    │
+│                                         │
+│  Cria documento em "users/{uid}" com:  │
+│  - uid, username, email                │
+│  - firstName, surname, contact         │
+│  - pin_hash, pin_salt (SHA-256)        │
+│  - created_at, updated_at, last_login  │
+│  - failed_attempts = 0                 │
+│  - locked_until = null                 │
+│                                         │
+│  Se falhar → apaga conta Firebase      │
+└─────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│  5. ✅ SUCESSO — Vai para a HOME       │
+└─────────────────────────────────────────┘
+```
+
+### 4.3 — Verificações em tempo real
+
+Enquanto o utilizador preenche o formulário:
+- **Username**: após 3 caracteres, verifica automaticamente se já existe (ícone verde/vermelho)
+- **Email**: após escrever um email válido, verifica se já está registado
+- **Password**: mostra a força da password (Fraca/Média/Forte/Muito Forte) com uma barra colorida
+
+Isto tudo acontece **sem clicar em botão nenhum** — é automático.
+
+---
+
+## 5. Fluxo "Esqueceu a Senha"
+
+### 5.1 — O que o utilizador vê
+
+Um ecrã simples com:
+- Título: "Reset Password"
+- Subtítulo explicativo
+- Campo de **Email**
+- Botão **"Send Reset Link"**
+- Mensagem de sucesso verde (quando o email é enviado)
+- Link **"Back to Login"**
+
+### 5.2 — O que acontece
+
+```
+UTILIZADOR clica "Forgot Password?" no Login
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│  1. ABRE ecrã "Reset Password"          │
+└─────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│  2. UTILIZADOR escreve email            │
+│     e clica "Send Reset Link"           │
+└─────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│  3. VALIDAÇÃO (ForgotPasswordViewModel) │
+│                                         │
+│  Email é válido? → continua            │
+│  Inválido?       → ❌ "Email inválido" │
+└─────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│  4. ENVIAR EMAIL (AuthRepository)       │
+│                                         │
+│  Firebase Auth envia email de           │
+│  redefinição de password               │
+│                                         │
+│  Sucesso? → ✅ "Reset link sent!"      │
+│  Erro?    → ❌ Mostra erro             │
+└─────────────────────────────────────────┘
+```
+
+### 5.3 — Notas importantes
+
+- O email de redefinição é enviado **pelo Firebase** — não precisamos de servidor próprio
+- O email contém um link temporário para o utilizador definir uma nova password
+- Após redefinir a password, o utilizador volta ao ecrã de Login e entra com a nova password
+- O ecrã não navega automaticamente para lado nenhum — mostra mensagem de sucesso e o utilizador volta manualmente ao Login
+
+---
+
+## 6. Auto-login (Sessão Persistente)
+
+### 6.1 — O que acontece quando o app abre
+
+```
+APP ABRE
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│  MainActivity.onCreate()               │
+│                                         │
+│  Pergunta ao SessionManager:            │
+│  "O utilizador já fez login antes?"    │
+│                                         │
+│  Sim? → Vai direto para a HOME         │
+│         (pula o ecrã de Login)         │
+│                                         │
+│  Não? → Mostra o ecrã de Login         │
+└─────────────────────────────────────────┘
+```
+
+### 6.2 — Como funciona a sessão local
+
+O `SessionManager` guarda no telemóvel (SharedPreferences) 4 informações:
+
+| O que guarda | Para que serve |
+|---|---|
+| `session_id` | ID único da sessão atual |
+| `user_uid` | ID do utilizador no Firebase |
+| `session_expiry` | Quando a sessão expira (timestamp) |
+| `auth_state` | `true` se o utilizador está logado |
+
+A sessão expira após **24 horas**. Depois disso, o utilizador tem de fazer login novamente.
+
+---
+
+## 7. Logout
+
+### 7.1 — Como o utilizador faz logout
+
+No ecrã **Home**, há um botão **"Logout"** (vermelho).
+
+### 7.2 — O que acontece
+
+```
+UTILIZADOR clica "Logout"
+         │
+         ▼
+┌─────────────────────────────────────────┐
+│  1. LoginViewModel.logout()             │
+│                                         │
+│  a) FirebaseAuth.signOut()              │
+│     (termina sessão no Firebase)        │
+│                                         │
+│  b) SessionManager.clearSession()       │
+│     (apaga session_id, user_uid,        │
+│      session_expiry do telemóvel)       │
+│                                         │
+│  c) Volta ao ecrã de Login              │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## 8. Mapa de Ficheiros
+
+Onde está cada peça do puzzle:
+
+| O que é | Ficheiro | Caminho |
 |---|---|---|
-| Email | RFC 5322 via `ValidationUtils.validateEmail()` | "Formato de email inválido" |
-| Password | Mín. 7 caracteres via `ValidationUtils.validatePassword()` | "Senha muito curta" |
-
-Se a validação falha, o estado muda para `AuthState.Error` e o fluxo para.
-
-### 2.3 — Autenticação Firebase: AuthRepository
-
-Com os campos válidos, inicia-se uma corrotina:
-
-```kotlin
-_authState.value = AuthState.Loading
-
-val authResult = authRepo.loginWithEmail(email, password)
-```
-
-O `AuthRepository.loginWithEmail()` chama `FirebaseAuth.signInWithEmailAndPassword()`.
-
-**Possíveis erros do Firebase:**
-
-| Exceção | Mensagem |
-|---|---|
-| `FirebaseAuthInvalidUserException` | "Nenhuma conta encontrada com este email" |
-| `FirebaseAuthInvalidCredentialsException` | "Email ou senha inválidos" |
-| Outras | Mensagem genérica da exceção |
-
-**Em caso de erro de credenciais**, o ViewModel registra um log de erro no Firestore:
-
-```kotlin
-logAuthError(type = AuthErrorLog.ErrorType.INVALID_PASSWORD, identifier = email)
-```
-
-O log contém: ID único, tipo do erro, identificador mascarado, timestamp e IP do dispositivo.
-
-### 2.4 — Busca do Perfil: FirestoreRepository
-
-Com a autenticação bem-sucedida, busca-se o documento do usuário no Firestore:
-
-```kotlin
-val userResult = firestoreRepo.getUserById(uid)
-```
-
-Coleção: `users/{uid}` → retorna um objeto `AppUser`.
-
-Se o documento não existir, o login é recusado com "Perfil de usuário não encontrado".
-
-### 2.5 — Verificação de Bloqueio: SecurityUtils
-
-O sistema verifica se a conta está bloqueada:
-
-```kotlin
-if (SecurityUtils.isAccountLocked(user.failedAttempts, user.lockedUntil)) { ... }
-```
-
-**Critérios para conta bloqueada:**
-- `lockedUntil` não é nulo
-- `failedAttempts >= MAX_LOGIN_ATTEMPTS` (5 tentativas)
-- O timestamp atual é anterior a `lockedUntil`
-
-Se bloqueada, registra `ACCOUNT_LOCKED` no log de erros e exibe "Conta bloqueada. Tente novamente mais tarde."
-
-### 2.6 — Reset de Tentativas e Atualização
-
-Com a conta válida:
-
-```kotlin
-firestoreRepo.resetFailedAttempts(uid)   // failed_attempts = 0, locked_until = null
-firestoreRepo.updateLastLogin(uid)       // last_login = now, updated_at = now
-```
-
-### 2.7 — Criação da Sessão
-
-Uma sessão é criada e persistida em dois lugares:
-
-**No Firestore** (`auth_sessions/{sessionId}`):
-```kotlin
-val session = AuthSession(
-    sessionId = SecurityUtils.generateSessionId(),  // UUID v4
-    uid = uid,
-    createdAt = Timestamp.now(),
-    expiresAt = Timestamp(now.seconds + 86400, 0),  // 24 horas
-    ipAddress = SecurityUtils.getDeviceIpAddress(context)
-)
-firestoreRepo.createSession(session)
-```
-
-**Localmente** via `SessionManager` (SharedPreferences):
-| Chave | Valor |
-|---|---|
-| `session_id` | UUID da sessão |
-| `user_uid` | UID do Firebase |
-| `session_expiry` | Timestamp de expiração (segundos) |
-| `auth_state` | `true` |
-
-### 2.8 — Navegação para Home
-
-Com tudo concluído:
-
-```kotlin
-_authState.value = AuthState.Success(uid)
-```
-
-O `LoginFragment` observa o estado `Success` e navega:
-
-```kotlin
-findNavController().navigate(R.id.action_login_to_home)
-```
+|  Tela de Login | `LoginFragment.kt` | `ui/auth/` |
+|  Tela de Registo | `RegisterFragment.kt` | `ui/auth/` |
+|  Tela Esqueceu Senha | `ForgotPasswordFragment.kt` | `ui/auth/` |
+|  Tela Inicial | `HomeFragment.kt` | `ui/home/` |
+|  Lógica de Login | `LoginViewModel.kt` | `ui/auth/` |
+|  Lógica de Registo | `RegisterViewModel.kt` | `ui/auth/` |
+|  Lógica Reset Senha | `ForgotPasswordViewModel.kt` | `ui/auth/` |
+|  Lógica da Home | `HomeViewModel.kt` | `ui/home/` |
+|  Firebase Auth | `AuthRepository.kt` | `data/` |
+|  Firebase Firestore | `FirestoreRepository.kt` | `data/` |
+|  Sessão local | `SessionManager.kt` | `data/` |
+|  Modelo Utilizador | `AppUser.kt` | `data/` |
+|  Modelo Sessão | `AuthSession.kt` | `data/` |
+|  Modelo Erro | `AuthErrorLog.kt` | `data/` |
+|  Validações | `ValidationUtils.kt` | `util/` |
+|  Segurança (IP, bloqueio) | `SecurityUtils.kt` | `util/` |
+|  PIN Hashing | `PinUtils.kt` | `util/` |
+|  Constantes | `Constants.kt` | `util/` |
+|  Atividade Principal | `MainActivity.kt` | `raiz` |
+|  Navegação | `mobile_navigation.xml` | `res/navigation/` |
 
 ---
 
-## 3. Estados do AuthViewModel
-
-```
-Idle → Loading → Success(uid)
-                → Error(message)
-```
-
-| Estado | Significado |
-|---|---|
-| `Idle` | Estado inicial, nenhuma operação em andamento |
-| `Loading` | Requisição em andamento (botão com spinner) |
-| `Success(uid)` | Login bem-sucedido, contém o UID do Firebase |
-| `Error(message)` | Falha em qualquer etapa, contém mensagem legível |
-
----
-
-## 4. Logout
-
-O método `logout()` no ViewModel:
-```kotlin
-authRepo.signOut()       // FirebaseAuth.signOut()
-sessionManager.clearSession()  // limpa SharedPreferences
-_authState.value = AuthState.Idle
-```
-
-O `HomeFragment` ou botão de logout chama `viewModel.logout()` e navega para `loginFragment` via `action_global_logout`.
-
----
-
-## 5. Sessão Persistente (Auto-login)
-
-Ao abrir o app, `MainActivity.onCreate()` verifica:
-
-```kotlin
-if (sessionManager.isLoggedIn()) {
-    navController.navigate(R.id.nav_home)
-}
-```
-
-Isso pula a tela de login se o usuário já estiver autenticado.
-
----
-
-## 6. Resumo das Camadas e Arquivos
-
-| Arquivo | Caminho | Responsabilidade |
-|---|---|---|
-| `LoginFragment.kt` | `auth/LoginFragment.kt` | UI do formulário, animações, navegação |
-| `AuthViewModel.kt` | `auth/AuthViewModel.kt` | Lógica de login, validação, sessão, estado |
-| `AuthRepository.kt` | `firebase/AuthRepository.kt` | Chamadas ao Firebase Auth |
-| `FirestoreRepository.kt` | `firebase/FirestoreRepository.kt` | CRUD no Firestore |
-| `SessionManager.kt` | `service/SessionManager.kt` | SharedPreferences |
-| `AuthSession.kt` | `model/AuthSession.kt` | Modelo da sessão |
-| `AppUser.kt` | `model/AppUser.kt` | Modelo do usuário |
-| `SecurityUtils.kt` | `util/SecurityUtils.kt` | Verificação de bloqueio, IP, UUID |
-| `ValidationUtils.kt` | `util/ValidationUtils.kt` | Validação de email/password |
-| `Constants.kt` | `util/Constants.kt` | Constantes (coleções, limites) |
-| `MainActivity.kt` | `MainActivity.kt` | Auto-login, drawer, navegação global |
+> **DDDStock** — Um app Android de gestão de stock com autenticação Firebase.

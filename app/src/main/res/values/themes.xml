@@ -23,16 +23,4 @@
     <style name="Theme.DDDStock.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <style name="Theme.DDDStock.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
-
-    <!-- PIN Keypad Button Style -->
-    <style name="PinKeyButton" parent="Widget.MaterialComponents.Button.TextButton">
-        <item name="android:layout_width">0dp</item>
-        <item name="android:layout_height">72dp</item>
-        <item name="android:layout_margin">6dp</item>
-        <item name="android:backgroundTint">@color/pin_key_bg</item>
-        <item name="android:textColor">@color/pin_key_text</item>
-        <item name="android:textSize">24sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="cornerRadius">16dp</item>
-    </style>
 </resources>

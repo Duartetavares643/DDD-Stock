@@ -4,16 +4,16 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.example.ddd_stock.firebase.FirestoreRepository
-import com.example.ddd_stock.service.SessionManager
+import com.example.ddd_stock.data.FirestoreRepository
+import com.example.ddd_stock.data.SessionManager
 import kotlinx.coroutines.launch
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val firestoreRepo = FirestoreRepository()
     private val sessionManager = SessionManager(application)
 
-    private val _user = MutableLiveData<com.example.ddd_stock.model.AppUser>()
-    val user: LiveData<com.example.ddd_stock.model.AppUser> = _user
+    private val _user = MutableLiveData<com.example.ddd_stock.data.AppUser>()
+    val user: LiveData<com.example.ddd_stock.data.AppUser> = _user
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
     private val _error = MutableLiveData<String?>()

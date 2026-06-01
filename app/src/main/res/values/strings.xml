@@ -30,6 +30,14 @@
     <string name="auth_pin">Security PIN</string>
     <string name="auth_pin_helper">4 digits, no sequential patterns</string>
 
+    <!-- Forgot Password -->
+    <string name="auth_forgot_password">Forgot Password?</string>
+    <string name="auth_reset_title">Reset Password</string>
+    <string name="auth_reset_subtitle">Enter your email address and we\'ll send you a reset link</string>
+    <string name="auth_send_reset">Send Reset Link</string>
+    <string name="auth_reset_sent">Reset link sent! Check your email.</string>
+    <string name="auth_back_to_login">Back to Login</string>
+
     <!-- Home -->
     <string name="home_welcome">Welcome, %s</string>
     <string name="home_logout">Logout</string>

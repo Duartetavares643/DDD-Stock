@@ -8,17 +8,17 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
-import com.example.ddd_stock.auth.AuthViewModel
+import com.example.ddd_stock.data.SessionManager
 import com.example.ddd_stock.databinding.ActivityMainBinding
-import com.example.ddd_stock.service.SessionManager
+import com.example.ddd_stock.ui.auth.LoginViewModel
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private lateinit var vm: AuthViewModel
+    private lateinit var vm: LoginViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        vm = ViewModelProvider(this).get(AuthViewModel::class.java)
+        vm = ViewModelProvider(this).get(LoginViewModel::class.java)
         binding = ActivityMainBinding.inflate(layoutInflater); setContentView(binding.root)
         setSupportActionBar(binding.appBarMain.toolbar)
         val nav = findNavController(R.id.nav_host_fragment_content_main)
@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
         binding.navView.setupWithNavController(nav)
 
         nav.addOnDestinationChangedListener { _, d, _ ->
-            val auth = d.id == R.id.loginFragment || d.id == R.id.registerFragment
+            val auth = d.id == R.id.loginFragment || d.id == R.id.registerFragment || d.id == R.id.forgotPasswordFragment
             if (auth) { supportActionBar?.hide(); binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED) }
             else { supportActionBar?.show(); binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED) }
         }

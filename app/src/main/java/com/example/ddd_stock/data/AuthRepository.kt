@@ -1,4 +1,4 @@
-package com.example.ddd_stock.firebase
+package com.example.ddd_stock.data
 import com.google.firebase.auth.*
 import kotlinx.coroutines.tasks.await
 
@@ -14,6 +14,7 @@ class AuthRepository {
 
     suspend fun registerWithEmail(email: String, password: String) = firebaseCall { auth.createUserWithEmailAndPassword(email, password).await().user?.uid ?: throw Exception("Failed to create user") }
     suspend fun loginWithEmail(email: String, password: String) = firebaseCall { auth.signInWithEmailAndPassword(email, password).await().user?.uid ?: throw Exception("Failed to sign in") }
+    suspend fun sendPasswordResetEmail(email: String) = firebaseCall { auth.sendPasswordResetEmail(email).await() }
     fun getCurrentUserId() = auth.currentUser?.uid
     fun isUserLoggedIn() = auth.currentUser != null
     fun signOut() = auth.signOut()

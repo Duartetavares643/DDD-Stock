@@ -1,4 +1,4 @@
-package com.example.ddd_stock.model
+package com.example.ddd_stock.data
 import com.google.firebase.Timestamp
 
 data class AuthSession(

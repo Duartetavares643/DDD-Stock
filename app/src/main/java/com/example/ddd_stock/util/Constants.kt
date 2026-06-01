@@ -8,4 +8,5 @@ object Constants {
     const val NAME_MIN_LENGTH = 2; const val NAME_MAX_LENGTH = 50; const val SURNAME_MAX_LENGTH = 80
     const val PASSWORD_MIN_LENGTH = 7; const val PASSWORD_MAX_LENGTH = 128
     const val PIN_LENGTH = 4
+    const val SESSION_DURATION_SECONDS = 86400L
 }

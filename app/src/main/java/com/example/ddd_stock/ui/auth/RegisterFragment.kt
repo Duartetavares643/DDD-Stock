@@ -1,4 +1,4 @@
-package com.example.ddd_stock.auth
+package com.example.ddd_stock.ui.auth
 import android.animation.ObjectAnimator
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -16,7 +16,7 @@ import com.example.ddd_stock.util.ValidationUtils
 class RegisterFragment : Fragment() {
     private var _binding: FragmentRegisterBinding? = null
     private val binding get() = _binding!!
-    private lateinit var viewModel: AuthViewModel
+    private lateinit var viewModel: RegisterViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentRegisterBinding.inflate(inflater, container, false); return binding.root
@@ -24,7 +24,7 @@ class RegisterFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel = ViewModelProvider(requireActivity()).get(AuthViewModel::class.java)
+        viewModel = ViewModelProvider(this).get(RegisterViewModel::class.java)
         setupListeners(); setupObservers(); animateEntrance()
     }
 
@@ -52,10 +52,10 @@ class RegisterFragment : Fragment() {
     private fun setupObservers() {
         viewModel.authState.observe(viewLifecycleOwner) { state ->
             when (state) {
-                is AuthViewModel.AuthState.Loading -> { binding.btnRegister.showLoading(); hideError() }
-                is AuthViewModel.AuthState.Success -> { binding.btnRegister.hideLoading(); findNavController().navigate(R.id.action_register_to_home) }
-                is AuthViewModel.AuthState.Error -> { binding.btnRegister.hideLoading(); showError(state.message) }
-                is AuthViewModel.AuthState.Idle -> binding.btnRegister.hideLoading()
+                is RegisterViewModel.AuthState.Loading -> { binding.btnRegister.showLoading(); hideError() }
+                is RegisterViewModel.AuthState.Success -> { binding.btnRegister.hideLoading(); findNavController().navigate(R.id.action_register_to_home) }
+                is RegisterViewModel.AuthState.Error -> { binding.btnRegister.hideLoading(); showError(state.message) }
+                is RegisterViewModel.AuthState.Idle -> binding.btnRegister.hideLoading()
             }
         }
 

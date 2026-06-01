@@ -7,13 +7,13 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import com.example.ddd_stock.R
-import com.example.ddd_stock.auth.AuthViewModel
 import com.example.ddd_stock.databinding.FragmentHomeBinding
+import com.example.ddd_stock.ui.auth.LoginViewModel
 
 class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
-    private lateinit var authViewModel: AuthViewModel
+    private lateinit var authViewModel: LoginViewModel
     private lateinit var homeViewModel: HomeViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -22,7 +22,7 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        authViewModel = ViewModelProvider(requireActivity()).get(AuthViewModel::class.java)
+        authViewModel = ViewModelProvider(requireActivity()).get(LoginViewModel::class.java)
         homeViewModel = ViewModelProvider(this).get(HomeViewModel::class.java)
         homeViewModel.loadUserProfile()
         homeViewModel.user.observe(viewLifecycleOwner) { binding.textHome.text = getString(R.string.home_welcome, it.username); binding.progressBar.visibility = View.GONE; binding.textHome.visibility = View.VISIBLE }
